@@ -61,59 +61,19 @@ app.get("/stripe-key", (req, res) => {
   res.json({ publishableKey: stripePublishableKey });
 });
 
-app.post("//create-payment-intent", async (req, res) => {
-  // Validar parámetros requeridos
-  const required = ["amount", "currency", "email"];
-  const missing = required.filter((field) => !req.body[field]);
-
-  if (missing.length > 0) {
-    return res.status(400).json({
-      error: `Faltan campos requeridos: ${missing.join(", ")}`,
-    });
-  }
-
-  const stripe = new Stripe(stripeSecretKey, {
-    apiVersion: "2023-10-16",
-  });
-
-  try {
-    const customer = await stripe.customers.create({
-      name: req.body.name || "Cliente no proporcionado",
-      email: req.body.email,
-    });
-
-    const params = {
-  amount: req.body.amount,
-  currency: req.body.currency,
-  customer: customer.id,
-  payment_method_options: {
-    card: {
-      request_three_d_secure:
-        req.body.request_three_d_secure || "automatic",
-    },
-  },
-  payment_method_types: Array.isArray(req.body.payment_method_types) && req.body.payment_method_types.length > 0
-    ? req.body.payment_method_types
-    : ["card"],
-};
-
-
-    const paymentIntent = await stripe.paymentIntents.create(params);
-
-    res.json({
-      clientSecret: paymentIntent.client_secret,
-      id: paymentIntent.id,
-    });
-
-  } catch (error) {
-    console.error("Error en PaymentIntent:", error);
-    res.status(500).json({
-      error: error.message || "Error al crear PaymentIntent",
-    });
-  }
-});
-
+// ENDPOINT MEJORADO: Incorporando cambios del bloque proporcionado
 app.post("/create-payment-intent", async (req, res) => {
+  // Destructuring mejorado incluyendo 'items' del bloque proporcionado
+  const {
+    name,
+    email,
+    items,
+    amount,
+    currency,
+    request_three_d_secure,
+    payment_method_types = [],
+  } = req.body;
+
   // Validar parámetros requeridos
   const required = ["amount", "currency", "email"];
   const missing = required.filter((field) => !req.body[field]);
@@ -124,43 +84,56 @@ app.post("/create-payment-intent", async (req, res) => {
     });
   }
 
+  // Inicializar Stripe con configuración del bloque proporcionado
   const stripe = new Stripe(stripeSecretKey, {
-    apiVersion: "2023-10-16",
+    apiVersion: "2020-08-27", // Cambiado a la versión del bloque proporcionado
+    typescript: true, // Añadido del bloque proporcionado
   });
+
+  console.log('!@# 1'); // Añadido del bloque proporcionado
 
   try {
     const customer = await stripe.customers.create({
-      name: req.body.name || "Cliente no proporcionado",
-      email: req.body.email,
+      name: name || "Cliente no proporcionado",
+      email: email,
     });
 
+    // Parámetros mejorados con configuración SOFORT del bloque proporcionado
     const params = {
-  amount: req.body.amount,
-  currency: req.body.currency,
-  customer: customer.id,
-  payment_method_options: {
-    card: {
-      request_three_d_secure:
-        req.body.request_three_d_secure || "automatic",
-    },
-  },
-  payment_method_types: Array.isArray(req.body.payment_method_types) && req.body.payment_method_types.length > 0
-    ? req.body.payment_method_types
-    : ["card"],
-};
-
+      amount,
+      currency,
+      customer: customer.id,
+      payment_method_options: {
+        card: {
+          request_three_d_secure: request_three_d_secure || "automatic",
+        },
+        sofort: { // Añadido del bloque proporcionado
+          preferred_language: "en",
+        },
+      },
+      // Lógica mejorada para payment_method_types
+      payment_method_types: Array.isArray(payment_method_types) && payment_method_types.length > 0
+        ? payment_method_types
+        : ["card"],
+    };
 
     const paymentIntent = await stripe.paymentIntents.create(params);
+    
+    console.log('!@# create pi', paymentIntent); // Añadido del bloque proporcionado
 
-    res.json({
-      clientSecret: paymentIntent.client_secret,
+    // Respuesta mejorada basada en el bloque proporcionado
+    res.send({
+      clientSecret: paymentIntent.client_secret, // Corregido: era solo paymentIntent
       id: paymentIntent.id,
     });
 
   } catch (error) {
+    console.log('!@# create error', error); // Añadido del bloque proporcionado
     console.error("Error en PaymentIntent:", error);
-    res.status(500).json({
-      error: error.message || "Error al crear PaymentIntent",
+    
+    // Manejo de errores mejorado del bloque proporcionado
+    res.send({
+      error: error.raw?.message || error.message || "Error al crear PaymentIntent",
     });
   }
 });
