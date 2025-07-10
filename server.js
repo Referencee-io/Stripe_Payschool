@@ -148,6 +148,92 @@ app.post("/create-payment-intent", async (req, res) => {
   }
 });
 
+app.post("//create-payment-intent", async (req, res) => {
+  // Destructuring mejorado incluyendo 'items' del bloque proporcionado
+  const {
+    name,
+    email,
+    items,
+    amount,
+    currency,
+    request_three_d_secure,
+    payment_method_types = [],
+  } = req.body;
+
+  // Validar parámetros requeridos
+  const required = ["amount", "currency", "email"];
+  const missing = required.filter((field) => !req.body[field]);
+
+  if (missing.length > 0) {
+    return res.status(400).json({
+      error: `Faltan campos requeridos: ${missing.join(", ")}`,
+    });
+  }
+
+  // Inicializar Stripe con configuración del bloque proporcionado
+  const stripe = new Stripe(stripeSecretKey, {
+    apiVersion: "2020-08-27", // Cambiado a la versión del bloque proporcionado
+    typescript: true, // Añadido del bloque proporcionado
+  });
+
+  console.log('!@# 1'); // Añadido del bloque proporcionado
+
+  try {
+    const customer = await stripe.customers.create({
+      name: name || "Cliente no proporcionado",
+      email: email,
+    });
+
+    // Determinar métodos de pago
+    const finalPaymentMethodTypes = Array.isArray(payment_method_types) && payment_method_types.length > 0
+      ? payment_method_types
+      : ["card"];
+
+    // Configurar opciones de método de pago dinámicamente
+    const paymentMethodOptions = {};
+    
+    if (finalPaymentMethodTypes.includes("card")) {
+      paymentMethodOptions.card = {
+        request_three_d_secure: request_three_d_secure || "automatic",
+      };
+    }
+    
+    if (finalPaymentMethodTypes.includes("sofort")) {
+      paymentMethodOptions.sofort = {
+        preferred_language: "en",
+      };
+    }
+
+    // Parámetros mejorados con configuración dinámica
+    const params = {
+      amount,
+      currency,
+      customer: customer.id,
+      payment_method_options: paymentMethodOptions,
+      payment_method_types: finalPaymentMethodTypes,
+    };
+
+    const paymentIntent = await stripe.paymentIntents.create(params);
+    
+    console.log('!@# create pi', paymentIntent); // Añadido del bloque proporcionado
+
+    // Respuesta corregida - enviando solo client_secret
+    res.send({
+      clientSecret: paymentIntent.client_secret,
+      id: paymentIntent.id,
+    });
+
+  } catch (error) {
+    console.log('!@# create error', error); // Añadido del bloque proporcionado
+    console.error("Error en PaymentIntent:", error);
+    
+    // Manejo de errores mejorado del bloque proporcionado
+    res.send({
+      error: error.raw?.message || error.message || "Error al crear PaymentIntent",
+    });
+  }
+});
+
 // Webhook handler
 app.post("/webhook", async (req, res) => {
   const sig = req.headers["stripe-signature"];
