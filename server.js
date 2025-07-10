@@ -98,32 +98,42 @@ app.post("/create-payment-intent", async (req, res) => {
       email: email,
     });
 
-    // Parámetros mejorados con configuración SOFORT del bloque proporcionado
+    // Determinar métodos de pago
+    const finalPaymentMethodTypes = Array.isArray(payment_method_types) && payment_method_types.length > 0
+      ? payment_method_types
+      : ["card"];
+
+    // Configurar opciones de método de pago dinámicamente
+    const paymentMethodOptions = {};
+    
+    if (finalPaymentMethodTypes.includes("card")) {
+      paymentMethodOptions.card = {
+        request_three_d_secure: request_three_d_secure || "automatic",
+      };
+    }
+    
+    if (finalPaymentMethodTypes.includes("sofort")) {
+      paymentMethodOptions.sofort = {
+        preferred_language: "en",
+      };
+    }
+
+    // Parámetros mejorados con configuración dinámica
     const params = {
       amount,
       currency,
       customer: customer.id,
-      payment_method_options: {
-        card: {
-          request_three_d_secure: request_three_d_secure || "automatic",
-        },
-        sofort: { // Añadido del bloque proporcionado
-          preferred_language: "en",
-        },
-      },
-      // Lógica mejorada para payment_method_types
-      payment_method_types: Array.isArray(payment_method_types) && payment_method_types.length > 0
-        ? payment_method_types
-        : ["card"],
+      payment_method_options: paymentMethodOptions,
+      payment_method_types: finalPaymentMethodTypes,
     };
 
     const paymentIntent = await stripe.paymentIntents.create(params);
     
     console.log('!@# create pi', paymentIntent); // Añadido del bloque proporcionado
 
-    // Respuesta mejorada basada en el bloque proporcionado
+    // Respuesta corregida - enviando solo client_secret
     res.send({
-      clientSecret: paymentIntent.client_secret, // Corregido: era solo paymentIntent
+      clientSecret: paymentIntent.client_secret,
       id: paymentIntent.id,
     });
 
