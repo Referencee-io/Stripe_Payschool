@@ -24,7 +24,7 @@ app.get("/stripe-key", (req, res) => {
   res.send({ publishableKey: stripePublishableKey });
 });
 
-app.post("/create-payment-intent", async (req, res) => {
+app.post("//create-payment-intent", async (req, res) => {
   const {
     name,
     email,
