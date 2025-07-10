@@ -32,7 +32,17 @@ app.post("//create-payment-intent", async (req, res) => {
     amount,
     currency,
     request_three_d_secure,
-    payment_method_types = [],
+     payment_method_options: {
+    card: {
+      request_three_d_secure:
+        req.body.request_three_d_secure || "automatic",
+    },
+  },
+  payment_method_types: Array.isArray(req.body.payment_method_types) && req.body.payment_method_types.length > 0
+    ? req.body.payment_method_types
+    : ["card"],
+};
+
   } = req.body;
 
   const stripe = new Stripe(stripeSecretKey, {
